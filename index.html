@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room Planner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .month-container {
+      margin-bottom: 60px;
+      border: 1px solid #ccc;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      overflow-x: auto;
+    }
+    .month-title {
+      font-size: 20px;
+      font-weight: bold;
+      padding: 10px 20px;
+      background-color: #f1f1f1;
+      border-bottom: 1px solid #ddd;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    th, td {
+      border: 1px solid #e0e0e0;
+      padding: 4px;
+      text-align: center;
+      vertical-align: middle;
+      position: relative;
+    }
+    th {
+      background: #f9f9f9;
+      font-size: 12px;
+    }
+    .room-name {
+      font-weight: bold;
+      background: #f0f0f0;
+    }
+    .bar {
+      position: absolute;
+      top: 1px;
+      bottom: 1px;
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 100%;
+      padding: 2px 6px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .past { background-color: #d9534f; }
+    .current { background-color: #5cb85c; }
+    .future { background-color: #5bc0de; }
+  </style>
+</head>
+<body>
+  <h1>Planner Prenotazioni 2025</h1>
+  <div id="planner">Caricamento in corso...</div>
+
+  <script>
+    const SHEET_ID = "1nT_LBuPFdjUGLeNoYz-wrSQ7b3zWFVv9J8c1ckhDGm0";
+    const SHEET_NAME = "Entrate";
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
+
+    const monthNames = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+                        "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+    const dayNames = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+    const rooms = ["Camera 1", "Camera 2", "Camera 3"];
+
+    function getDaysInMonth(month, year) {
+      return new Date(year, month + 1, 0).getDate();
+    }
+
+    function parseDate(str) {
+      const [d, m, y] = str.split("/").map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function formatDate(date) {
+      return date.toISOString().split("T")[0];
+    }
+
+    function loadData() {
+      fetch(url)
+        .then(res => res.text())
+        .then(text => {
+          const json = JSON.parse(text.substr(47).slice(0, -2));
+          const rows = json.table.rows.map(r => r.c.map(c => c?.v || ""));
+          renderPlanner(rows);
+        });
+    }
+
+    function renderPlanner(data) {
+      const planner = document.getElementById("planner");
+      planner.innerHTML = "";
+
+      const now = new Date();
+
+      for (let month = 0; month < 12; month++) {
+        const days = getDaysInMonth(month, 2025);
+        const table = document.createElement("table");
+        const monthDiv = document.createElement("div");
+        monthDiv.className = "month-container";
+        const title = document.createElement("div");
+        title.className = "month-title";
+        title.textContent = monthNames[month];
+        monthDiv.appendChild(title);
+
+        // Intestazione giorni
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+        const empty = document.createElement("th");
+        empty.textContent = "Camere";
+        headRow.appendChild(empty);
+        for (let d = 1; d <= days; d++) {
+          const th = document.createElement("th");
+          const date = new Date(2025, month, d);
+          th.textContent = `${d} ${dayNames[date.getDay()]}`;
+          headRow.appendChild(th);
+        }
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        // Corpo: righe camere
+        const tbody = document.createElement("tbody");
+        rooms.forEach((room, idx) => {
+          const row = document.createElement("tr");
+          const roomCell = document.createElement("td");
+          roomCell.className = "room-name";
+          roomCell.textContent = room;
+          row.appendChild(roomCell);
+
+          for (let d = 1; d <= days; d++) {
+            const cell = document.createElement("td");
+            cell.dataset.date = formatDate(new Date(2025, month, d));
+            row.appendChild(cell);
+          }
+          tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        monthDiv.appendChild(table);
+        planner.appendChild(monthDiv);
+      }
+
+      // Inserisci prenotazioni
+      data.forEach(([cliente, camere, checkin, notti]) => {
+        if (!cliente || !camere || !checkin || !notti) return;
+        const camereArray = camere.toString().split(",").map(c => parseInt(c.trim()));
+        const inDate = parseDate(checkin);
+        const outDate = new Date(inDate);
+        outDate.setDate(outDate.getDate() + parseInt(notti));
+        const today = new Date();
+
+        const status = outDate < today ? "past" : (inDate <= today && today < outDate ? "current" : "future");
+        const text = `${cliente}`;
+
+        camereArray.forEach(camera => {
+          const row = document.querySelectorAll("tbody tr")[camera - 1];
+          if (!row) return;
+          for (let d = 0; d < row.children.length; d++) {
+            const cell = row.children[d];
+            const cellDate = cell.dataset.date;
+            if (!cellDate) continue;
+            const date = new Date(cellDate);
+            if (date >= inDate && date < outDate) {
+              const div = document.createElement("div");
+              div.className = `bar ${status}`;
+              div.title = `Cliente: ${cliente}\nCamere: ${camere}\nCheck-in: ${checkin}\nCheck-out: ${outDate.toLocaleDateString("it-IT")}\nNotti: ${notti}`;
+              div.textContent = text;
+              cell.appendChild(div);
+            }
+          }
+        });
+      });
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

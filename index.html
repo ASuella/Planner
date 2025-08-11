@@ -3,137 +3,40 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Planner Alberghiero</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLANNING POGGIO 2025</title>
 <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-    .month { margin: 20px; border: 1px solid #ccc; border-radius: 10px; overflow-x: auto; }
-    .month-title { text-align: center; font-size: 20px; padding: 10px; background: #f8f8f8; border-bottom: 1px solid #ccc; }
-    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-    th, td { border: 1px solid #ddd; text-align: center; position: relative; }
-    th { background: #f0f0f0; font-weight: bold; }
-    .room-name { font-weight: bold; background: #fafafa; width: 100px; }
-    .booking {
-        position: absolute;
-        top: 0; bottom: 0;
-        margin: 2px;
-        border-radius: 8px;
-        color: white;
-        font-size: 12px;
-        display: flex; align-items: center; justify-content: center;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
     }
-    .past { background-color: #a0a0a0; }
-    .present { background-color: #4caf50; }
-    .future { background-color: #2196f3; }
+    header {
+        padding: 20px;
+        text-align: center;
+        background: linear-gradient(to right, #ff7e5f, #feb47b);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 2.5em;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    #planner {
+        padding: 20px;
+    }
 </style>
 </head>
 <body>
 
-<h1 style="text-align:center">Planner Alberghiero</h1>
-<div id="planner"></div>
+<header>PLANNING POGGIO 2025</header>
+<div id="planner">
+    <p>Qui verrà caricato il planner collegato a Google Sheets...</p>
+</div>
 
 <script>
-const sheetId = "1nT_LBuPFdjUGLeNoYz-wrSQ7b3zWFVv9J8c1ckhDGm0";
-const sheetName = "Entrate";
-const apiKey = "AIzaSyBx2BRSrtwX4bNPFOpGU-JONGpVED-Du1U"; // Sostituire con API key valida
-
-function getItalianMonths() {
-    return ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-            "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-}
-
-function getItalianWeekdaysShort() {
-    return ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
-}
-
-async function loadData() {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}?key=${apiKey}`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const rows = data.values;
-    rows.shift(); // rimuove intestazione
-    return rows.map(r => ({
-        cliente: r[0],
-        camere: r[1],
-        checkin: r[2],
-        notti: parseInt(r[3])
-    }));
-}
-
-function parseDate(str) {
-    const parts = str.split("/");
-    return new Date(parts[2], parts[1]-1, parts[0]);
-}
-
-function formatDate(date) {
-    return date.toLocaleDateString("it-IT");
-}
-
-function buildPlanner(bookings) {
-    const plannerDiv = document.getElementById("planner");
-    const months = getItalianMonths();
-    const year = new Date().getFullYear();
-    const rooms = ["Camera 1", "Camera 2", "Camera 3"];
-
-    for (let m=0; m<12; m++) {
-        const daysInMonth = new Date(year, m+1, 0).getDate();
-        let html = `<div class="month"><div class="month-title">${months[m]} ${year}</div>`;
-        html += `<table><thead><tr><th class="room-name">Camera</th>`;
-        for (let d=1; d<=daysInMonth; d++) {
-            const wd = getItalianWeekdaysShort()[new Date(year, m, d).getDay()-1] || "Dom";
-            html += `<th>${d}<br>${wd}</th>`;
-        }
-        html += `</tr></thead><tbody>`;
-
-        rooms.forEach(room => {
-            html += `<tr><td class="room-name">${room}</td>`;
-            for (let d=1; d<=daysInMonth; d++) {
-                html += `<td></td>`;
-            }
-            html += `</tr>`;
-        });
-
-        html += `</tbody></table></div>`;
-        plannerDiv.innerHTML += html;
-    }
-
-    bookings.forEach(b => {
-        const start = parseDate(b.checkin);
-        const end = new Date(start);
-        end.setDate(start.getDate() + b.notti);
-        const roomIndex = rooms.indexOf(b.camere);
-        if (roomIndex === -1) return;
-
-        const monthDivs = document.querySelectorAll(".month");
-        for (let m=start.getMonth(); m<=end.getMonth(); m++) {
-            const monthDiv = monthDivs[m];
-            const table = monthDiv.querySelector("table");
-            const row = table.rows[roomIndex+1];
-            const daysInMonth = new Date(year, m+1, 0).getDate();
-
-            const startDay = (m === start.getMonth()) ? start.getDate() : 1;
-            const endDay = (m === end.getMonth()) ? end.getDate() : daysInMonth;
-
-            for (let d=startDay; d<endDay; d++) {
-                const cell = row.cells[d];
-                if (!cell) continue;
-                const bar = document.createElement("div");
-                bar.classList.add("booking");
-
-                const today = new Date();
-                if (end < today) bar.classList.add("past");
-                else if (start <= today && end >= today) bar.classList.add("present");
-                else bar.classList.add("future");
-
-                bar.textContent = b.notti <= 2 ? b.cliente.split(" ").map(n => n[0]).join("") : b.cliente;
-                bar.title = `${b.cliente} | ${formatDate(start)} → ${formatDate(end)} | ${b.notti} notti | ${b.camere}`;
-                cell.appendChild(bar);
-            }
-        }
-    });
-}
-
-loadData().then(buildPlanner);
+    // Qui potrai aggiungere il codice per collegare Google Sheets
+    console.log("Planner pronto per collegamento dati in tempo reale.");
 </script>
 
 </body>

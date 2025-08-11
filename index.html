@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -9,34 +8,161 @@
     body {
         font-family: Arial, sans-serif;
         margin: 0;
-        padding: 0;
-        background-color: #f5f5f5;
+        background: #f4f4f4;
     }
     header {
-        padding: 20px;
         text-align: center;
-        background: linear-gradient(to right, #ff7e5f, #feb47b);
+        padding: 20px;
+        font-size: 2em;
+        font-weight: bold;
+        background: linear-gradient(90deg, #4a90e2, #9013fe);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 2.5em;
+    }
+    .month {
+        margin: 20px;
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+    }
+    .month h2 {
+        text-align: center;
+        background: #eee;
+        padding: 10px;
+        border-radius: 5px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+    th, td {
+        border: 1px solid #ccc;
+        padding: 3px;
+        text-align: center;
+        height: 40px;
+        position: relative;
+    }
+    .booking {
+        position: absolute;
+        height: 100%;
+        top: 0;
+        left: 0;
+        border-radius: 8px;
+        color: white;
+        font-size: 12px;
         font-weight: bold;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        white-space: nowrap;
     }
-    #planner {
-        padding: 20px;
-    }
+    .past { background: #e74c3c; }    /* rosso */
+    .future { background: #3498db; }  /* blu */
+    .active { background: #2ecc71; }  /* verde */
 </style>
 </head>
 <body>
 
 <header>PLANNING POGGIO 2025</header>
-<div id="planner">
-    <p>Qui verrà caricato il planner collegato a Google Sheets...</p>
-</div>
+
+<div id="planner"></div>
 
 <script>
-    // Qui potrai aggiungere il codice per collegare Google Sheets
-    console.log("Planner pronto per collegamento dati in tempo reale.");
+const rooms = ["Camera 1", "Camera 2", "Camera 3"];
+const months = [
+    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+];
+
+// Prenotazioni di esempio
+const bookings = [
+    { room: "Camera 1", name: "Mario Rossi", start: "2025-01-05", end: "2025-01-08" },
+    { room: "Camera 2", name: "Luca Bianchi", start: "2025-02-15", end: "2025-02-18" },
+    { room: "Camera 3", name: "Giulia Verdi", start: "2025-03-10", end: "2025-03-12" },
+    { room: "Camera 1", name: "Anna Neri", start: "2025-05-22", end: "2025-05-26" },
+    { room: "Camera 2", name: "Paolo Conti", start: "2025-07-01", end: "2025-07-05" },
+    { room: "Camera 3", name: "Sara Moretti", start: "2025-09-10", end: "2025-09-14" },
+    { room: "Camera 1", name: "Francesco Galli", start: "2025-11-20", end: "2025-11-25" }
+];
+
+function createPlanner() {
+    const planner = document.getElementById("planner");
+    const today = new Date();
+
+    months.forEach((monthName, monthIndex) => {
+        const monthDiv = document.createElement("div");
+        monthDiv.className = "month";
+
+        const title = document.createElement("h2");
+        title.textContent = monthName;
+        monthDiv.appendChild(title);
+
+        const table = document.createElement("table");
+        const headerRow = document.createElement("tr");
+        headerRow.appendChild(document.createElement("th")); // cella vuota per la colonna camere
+
+        const daysInMonth = new Date(2025, monthIndex + 1, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+            const th = document.createElement("th");
+            th.textContent = day;
+            headerRow.appendChild(th);
+        }
+        table.appendChild(headerRow);
+
+        rooms.forEach(room => {
+            const row = document.createElement("tr");
+            const roomCell = document.createElement("td");
+            roomCell.textContent = room;
+            row.appendChild(roomCell);
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const td = document.createElement("td");
+                row.appendChild(td);
+            }
+            table.appendChild(row);
+        });
+
+        // Inserimento prenotazioni
+        bookings.forEach(b => {
+            const startDate = new Date(b.start);
+            const endDate = new Date(b.end);
+            if (startDate.getMonth() === monthIndex || endDate.getMonth() === monthIndex) {
+                const startDay = startDate.getMonth() === monthIndex ? startDate.getDate() : 1;
+                const endDay = endDate.getMonth() === monthIndex ? endDate.getDate() : daysInMonth;
+
+                const roomIndex = rooms.indexOf(b.room) + 1;
+                const row = table.rows[roomIndex];
+                const startCell = row.cells[startDay];
+                const bookingDiv = document.createElement("div");
+
+                // Calcolo larghezza in celle
+                const duration = endDay - startDay + 1;
+                bookingDiv.className = "booking";
+
+                // Colore in base alla data
+                if (endDate < today) {
+                    bookingDiv.classList.add("past");
+                } else if (startDate > today) {
+                    bookingDiv.classList.add("future");
+                } else {
+                    bookingDiv.classList.add("active");
+                }
+
+                bookingDiv.style.width = `calc(${duration * 100}% + ${(duration - 1)}px)`;
+                bookingDiv.textContent = b.name;
+                startCell.appendChild(bookingDiv);
+            }
+        });
+
+        monthDiv.appendChild(table);
+        planner.appendChild(monthDiv);
+    });
+}
+
+createPlanner();
 </script>
 
 </body>

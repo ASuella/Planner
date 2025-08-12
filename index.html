@@ -7,14 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --room-col-width: 130px;
+    --room-col-width: 140px;
     --day-min-width: 18px;
     --row-height: 44px;
     --bar-radius: 10px;
     --max-width: 1400px;
+    --alt-bg: #fbfcfd;
+    --alt-bg-2: #f6f8fa;
   }
   *{box-sizing:border-box}
-  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;}
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;}
   body{background:#f4f6f8;color:#111;}
   header{padding:22px 12px;text-align:center;}
   .title{
@@ -39,17 +41,26 @@
   .days{flex:1;display:flex;position:relative;height:100%;overflow:visible;}
   .day{flex:0 0 var(--day-min-width);min-width:var(--day-min-width);height:100%;border-left:1px solid #f3f5f7;display:flex;align-items:center;justify-content:center;font-size:11px;color:#374151;padding:0 4px;box-sizing:border-box;}
   .day-header{background:#fafafa;padding:6px 6px;font-size:12px;color:#374151;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid #eef2f5;}
-  .bar{position:absolute;top:6px;bottom:6px;border-radius:var(--bar-radius);display:flex;align-items:center;justify-content:center;padding:0 8px;color:#fff;font-weight:700;font-size:13px;box-shadow:0 3px 10px rgba(14,30,60,0.12);cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;z-index:2;}
+  /* alternate column backgrounds achieved by JS adding .alt on .day and .day-header */
+  .day.alt, .day-header.alt { background: var(--alt-bg); }
+  .day.alt2, .day-header.alt2 { background: var(--alt-bg-2); }
+
+  .bar{position:absolute;top:6px;bottom:6px;border-radius:var(--bar-radius);display:flex;align-items:center;justify-content:center;padding:0 8px;color:#fff;font-weight:700;font-size:13px;box-shadow:0 3px 10px rgba(14,30,60,0.12);cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;z-index:3;}
   .bar.past{background:#e74c3c;}
   .bar.current{background:#2ecc71;}
   .bar.future{background:#3498db;}
+
   /* modal */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.28);display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:9999;}
   .modal{background:#fff;border-radius:10px;padding:16px 18px;min-width:300px;box-shadow:0 12px 40px rgba(0,0,0,0.18);position:relative;}
   .modal h3{margin:0 0 6px 0;font-size:18px;}
   .modal p{margin:6px 0;color:#333;font-size:14px;}
   .modal .close{position:absolute;right:10px;top:8px;border:0;background:none;font-size:18px;cursor:pointer;}
-  @media (max-width:1200px){:root{--room-col-width:110px;--day-min-width:14px;--max-width:1000px;} .title{font-size:28px;}}
+
+  @media (max-width:1200px){
+    :root{--room-col-width:110px;--day-min-width:14px;--max-width:1000px;}
+    .title{font-size:28px;}
+  }
 </style>
 </head>
 <body>
@@ -57,13 +68,13 @@
 <div id="container" aria-live="polite"></div>
 
 <script>
-// CONFIG
+// ---------- CONFIG ----------
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32ylCoynwf1H44moYbc5n42UMdGEHUtzE6SZ7kc1P7rcwA-NkAEpck9jO0bVRWYRcakvb0VEd5cEJ/pub?gid=0&single=true&output=csv";
 const YEAR = 2025;
 const ROOMS = ["Camera 1","Camera 2","Camera 3"];
-const REFRESH_MS = 5 * 60 * 1000;
+const REFRESH_MS = 5 * 60 * 1000; // 5 min
 
-// Robust CSV parser (handles quotes and commas)
+// ---------- UTIL: robust CSV parser ----------
 function parseCSV(text){
   const rows=[]; let cur=''; let row=[]; let inQuotes=false;
   for(let i=0;i<text.length;i++){
@@ -80,19 +91,19 @@ function parseCSV(text){
   return rows.map(r => r.map(c => c.trim()));
 }
 
-// Parse Italian date DD/MM/YYYY
+// parse DD/MM/YYYY
 function parseItDate(str){
   if(!str) return null;
-  const p = String(str).trim().split('/').map(s=>s.trim());
-  if(p.length < 3) return null;
-  const d = parseInt(p[0],10), m = parseInt(p[1],10)-1, y = parseInt(p[2],10);
+  const parts = String(str).trim().split('/').map(s=>s.trim());
+  if(parts.length < 3) return null;
+  const d = parseInt(parts[0],10), m = parseInt(parts[1],10)-1, y = parseInt(parts[2],10);
   if(Number.isNaN(d) || Number.isNaN(m) || Number.isNaN(y)) return null;
   return new Date(y,m,d);
 }
-
-function addDays(d, n){ const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
 function formatDDMMYYYY(d){ if(!d) return ''; const dd = String(d.getDate()).padStart(2,'0'); const mm = String(d.getMonth()+1).padStart(2,'0'); return dd + '/' + mm + '/' + d.getFullYear(); }
 
+// ---------- LOAD & RENDER ----------
 async function loadAndRender(){
   try{
     const res = await fetch(CSV_URL + "&t=" + Date.now(), {cache: "no-store"});
@@ -144,14 +155,14 @@ function renderPlanner(bookings){
     headRow.appendChild(daysHead); monthDiv.appendChild(headRow);
 
     // room rows
-    ROOMS.forEach(room => {
+    ROOMS.forEach((room, roomIndex) => {
       const row = document.createElement('div'); row.className='row';
       const roomCol = document.createElement('div'); roomCol.className='room-col'; roomCol.textContent = room; row.appendChild(roomCol);
       const daysEl = document.createElement('div'); daysEl.className='days';
       for(let d=1; d<=daysInMonth; d++){ const cell = document.createElement('div'); cell.className='day'; daysEl.appendChild(cell); }
       row.appendChild(daysEl);
 
-      // add bars
+      // add bars for bookings overlapping this month & room
       bookings.forEach(b => {
         if(!b.checkin || !b.checkout) return;
         if(!b.camere.some(c => c === room)) return;
@@ -159,17 +170,24 @@ function renderPlanner(bookings){
         const monthEnd = new Date(YEAR, month, daysInMonth);
         const bStart = b.checkin;
         const bEnd = b.checkout;
-        if(bEnd <= monthStart || bStart > addDays(monthEnd,1)) return;
+        if(bEnd <= monthStart || bStart > addDays(monthEnd,1)) return; // no overlap
+        // visible start (days units, 0-based), half-cell logic
         let visStart = 0;
         if(bStart.getFullYear()===YEAR && bStart.getMonth()===month){
           visStart = (bStart.getDate()-1) + 0.5;
+        } else {
+          visStart = 0;
         }
+        // visible end
         let visEnd = daysInMonth;
         if(bEnd.getFullYear()===YEAR && bEnd.getMonth()===month){
           visEnd = (bEnd.getDate()-1) + 0.5;
+        } else {
+          visEnd = daysInMonth;
         }
         const units = visEnd - visStart;
         if(units <= 0) return;
+        // create bar
         const bar = document.createElement('div'); bar.className='bar';
         const now = new Date();
         if(b.checkout <= now) bar.classList.add('past');
@@ -182,12 +200,13 @@ function renderPlanner(bookings){
         const minUnitsFull = 1.2;
         if(units >= minUnitsFull){ bar.textContent = b.cliente; }
         else { bar.textContent = b.cliente.split(/\s+/).map(x=>x[0]||'').join('').toUpperCase(); }
+        // attach metadata
         bar.dataset.cliente = b.cliente;
         bar.dataset.camere = b.camere.join(', ');
         bar.dataset.checkin = formatDDMMYYYY(b.checkin);
         bar.dataset.checkout = formatDDMMYYYY(b.checkout);
         bar.dataset.notti = b.notti;
-        bar.addEventListener('click', (e) => { e.stopPropagation(); showModal({
+        bar.addEventListener('click', (e)=>{ e.stopPropagation(); showModal({
           cliente: bar.dataset.cliente, camere: bar.dataset.camere, checkin: bar.dataset.checkin, checkout: bar.dataset.checkout, notti: bar.dataset.notti
         }); });
         daysEl.appendChild(bar);
@@ -199,21 +218,61 @@ function renderPlanner(bookings){
     container.appendChild(monthDiv);
   }
 
-  // adjust widths to avoid horizontal scroll
+  // alternate backgrounds for day columns for readability (apply to headers + cells)
+  applyAlternateDayBackgrounds();
+
+  // after DOM inserted, compute proper day widths so bars match grid
   adjustDayWidths();
+}
+
+function applyAlternateDayBackgrounds(){
+  const months = document.querySelectorAll('.month');
+  months.forEach(mon => {
+    const dayHeaders = mon.querySelectorAll('.day-header');
+    const dayCells = mon.querySelectorAll('.row .day');
+    for(let i=0;i<dayHeaders.length;i++){
+      const cls = (i % 2 === 0) ? 'alt' : 'alt2';
+      dayHeaders[i].classList.remove('alt','alt2'); dayHeaders[i].classList.add(cls);
+    }
+    // dayCells is linear for all rows, so we iterate and assign by column index modulo daysInMonth
+    if(dayCells.length===0) return;
+    const daysInMonth = mon.querySelectorAll('.day-header').length;
+    for(let col=0; col<daysInMonth; col++){
+      const cls = (col % 2 === 0) ? 'alt' : 'alt2';
+      // select each row's cell at index col
+      const rows = mon.querySelectorAll('.row');
+      // skip header row (first .row is header)
+      const roomRows = Array.from(mon.querySelectorAll('.row')).slice(1);
+      roomRows.forEach(rr => {
+        const cell = rr.querySelectorAll('.day')[col];
+        if(cell) { cell.classList.remove('alt','alt2'); cell.classList.add(cls); }
+      });
+    }
+  });
 }
 
 function adjustDayWidths(){
   const months = document.querySelectorAll('.month');
   months.forEach(mon => {
     const days = mon.querySelectorAll('.day');
-    if(days.length===0) return;
+    const headers = mon.querySelectorAll('.day-header');
+    if(days.length === 0 || headers.length === 0) return;
     const monthRect = mon.getBoundingClientRect();
-    const roomColWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--room-col-width')) || 120;
+    const roomColWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--room-col-width')) || 140;
     const available = Math.max(monthRect.width - roomColWidth - 40, 300);
-    const desired = Math.floor(available / days.length);
+    const daysCount = headers.length;
+    const desired = Math.floor(available / daysCount);
     const dayWidth = Math.max(desired, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--day-min-width')) || 18);
-    days.forEach(d => d.style.flex = '0 0 ' + dayWidth + 'px');
+    headers.forEach(h => h.style.flex = '0 0 ' + dayWidth + 'px');
+    // for each room row, set the same width on its .day children
+    const roomRows = mon.querySelectorAll('.row');
+    roomRows.forEach((rr, idx) => {
+      // skip header row when idx==0
+      if(idx === 0) return;
+      const cells = rr.querySelectorAll('.day');
+      cells.forEach(c => c.style.flex = '0 0 ' + dayWidth + 'px');
+    });
+    // After widths set, bars positioned with percent will match cells visually.
   });
 }
 
@@ -226,8 +285,6 @@ function showModal(data){
   document.body.appendChild(modal);
   modal.querySelector('.close').addEventListener('click', ()=> { modal.remove(); modal=null; });
   modal.addEventListener('click', (ev)=>{ if(ev.target === modal){ modal.remove(); modal=null; } });
-  // focus for accessibility
-  modal.querySelector('.modal').focus?.();
 }
 
 // init

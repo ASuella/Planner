@@ -1,163 +1,305 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>PLANNING POGGIO 2025</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f4;
-        margin: 0;
-        padding: 0;
-    }
-    h1 {
-        text-align: center;
-        padding: 15px;
-        background: linear-gradient(90deg, #1a73e8, #34a853);
-        color: white;
-        margin: 0;
-    }
-    table {
-        border-collapse: collapse;
-        margin: 20px auto;
-        background: white;
-        box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    }
-    th, td {
-        border: 1px solid #ddd;
-        text-align: center;
-        padding: 4px;
-        position: relative;
-        min-width: 40px;
-        height: 35px;
-    }
-    th {
-        background: #f0f0f0;
-        font-weight: bold;
-    }
-    .today {
-        background-color: yellow !important;
-    }
-    .booking {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        color: white;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        padding-left: 4px;
-        border-radius: 4px;
-        overflow: hidden;
-        white-space: nowrap;
-    }
-    .past { background-color: #e74c3c; }
-    .active { background-color: #2ecc71; }
-    .future { background-color: #3498db; }
-    .tooltip {
-        display: none;
-        position: absolute;
-        background: #333;
-        color: white;
-        padding: 5px;
-        font-size: 12px;
-        border-radius: 4px;
-        top: -40px;
-        left: 50%;
-        transform: translateX(-50%);
-        white-space: nowrap;
-        z-index: 999;
-    }
-    .booking:hover .tooltip {
-        display: block;
-    }
+  :root{
+    --room-col-width: 140px;
+    --day-min-width: 18px;
+    --row-height: 44px;
+    --bar-radius: 10px;
+    --max-width: 1400px;
+    --alt-bg: #fbfcfd;
+    --alt-bg-2: #f6f8fa;
+    --today-bg: #fff3b0;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;}
+  body{background:#f4f6f8;color:#111;}
+  header{padding:22px 12px;text-align:center;}
+  .title{
+    font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+    font-weight:700;
+    font-size:34px;
+    line-height:1;
+    display:inline-block;
+    padding:6px 12px;
+    background: linear-gradient(90deg,#ff7e5f,#feb47b,#f9d423);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+  #container{padding:12px 18px 80px;max-width:var(--max-width);margin:0 auto;}
+  .month{background:#fff;border-radius:10px;padding:12px;margin:18px 0;box-shadow:0 6px 18px rgba(12,20,30,0.04);overflow:hidden;}
+  .month-header{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+  .month-title{font-size:18px;font-weight:700;color:#1f2937;padding:8px 12px;border-radius:8px;background:#f3f4f6;}
+  .row{display:flex;align-items:stretch;height:var(--row-height);position:relative;border-bottom:1px solid #eef2f5;}
+  .room-col{flex:0 0 var(--room-col-width);background:#fff;border-right:1px solid #e6e9ee;display:flex;align-items:center;padding-left:14px;font-weight:600;color:#111;}
+  .days{flex:1;display:flex;position:relative;height:100%;overflow:visible;}
+  .day{flex:0 0 var(--day-min-width);min-width:var(--day-min-width);height:100%;border-left:1px solid #f3f5f7;display:flex;align-items:center;justify-content:center;font-size:11px;color:#374151;padding:0 4px;box-sizing:border-box;background:transparent;}
+  .day-header{background:#fafafa;padding:6px 6px;font-size:12px;color:#374151;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid #eef2f5;}
+  .day.alt, .day-header.alt { background: var(--alt-bg); }
+  .day.alt2, .day-header.alt2 { background: var(--alt-bg-2); }
+
+  /* today highlight */
+  .day.today, .day-header.today { background: var(--today-bg) !important; }
+
+  .bar{position:absolute;top:6px;bottom:6px;border-radius:var(--bar-radius);display:flex;align-items:center;justify-content:center;padding:0 8px;color:#fff;font-weight:700;font-size:13px;box-shadow:0 3px 10px rgba(14,30,60,0.12);cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;z-index:3;}
+  .bar.past{background:#e74c3c;}
+  .bar.current{background:#2ecc71;}
+  .bar.future{background:#3498db;}
+
+  /* modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.28);display:flex;align-items:flex-start;justify-content:center;padding-top:80px;z-index:9999;}
+  .modal{background:#fff;border-radius:10px;padding:16px 18px;min-width:300px;box-shadow:0 12px 40px rgba(0,0,0,0.18);position:relative;}
+  .modal h3{margin:0 0 6px 0;font-size:18px;}
+  .modal p{margin:6px 0;color:#333;font-size:14px;}
+  .modal .close{position:absolute;right:10px;top:8px;border:0;background:none;font-size:18px;cursor:pointer;}
+
+  @media (max-width:1200px){
+    :root{--room-col-width:110px;--day-min-width:14px;--max-width:1000px;}
+    .title{font-size:28px;}
+  }
 </style>
 </head>
 <body>
-
-<h1>PLANNING POGGIO 2025</h1>
-<div id="planner"></div>
+<header><span class="title">PLANNING POGGIO 2025</span></header>
+<div id="container" aria-live="polite"></div>
 
 <script>
-const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32ylCoynwf1H44moYbc5n42UMdGEHUtzE6SZ7kc1P7rcwA-NkAEpck9jO0bVRWYRcakvb0VEd5cEJ/pub?gid=0&single=true&output=csv";
+// CONFIG
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32ylCoynwf1H44moYbc5n42UMdGEHUtzE6SZ7kc1P7rcwA-NkAEpck9jO0bVRWYRcakvb0VEd5cEJ/pub?gid=0&single=true&output=csv";
+const YEAR = 2025;
+const ROOMS = ["Camera 1","Camera 2","Camera 3"];
+const REFRESH_MS = 5 * 60 * 1000;
 
-const startDate = new Date("2025-01-01");
-const endDate = new Date("2025-12-31");
-const today = new Date();
+// Robust CSV parser
+function parseCSV(text){
+  const rows=[]; let cur=''; let row=[]; let inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const ch = text[i];
+    if(ch === '"'){
+      if(inQuotes && text[i+1]==='"'){ cur += '"'; i++; } else { inQuotes = !inQuotes; }
+    } else if(ch === ',' && !inQuotes){ row.push(cur); cur=''; }
+    else if((ch === '\n' || ch === '\r') && !inQuotes){
+      if(cur !== '' || row.length>0){ row.push(cur); rows.push(row); row=[]; cur=''; }
+      if(ch === '\r' && text[i+1] === '\n') i++;
+    } else { cur += ch; }
+  }
+  if(cur !== '' || row.length>0){ row.push(cur); rows.push(row); }
+  return rows.map(r => r.map(c => c.trim()));
+}
 
-fetch(sheetUrl)
-.then(res => res.text())
-.then(csv => {
-    const rows = csv.trim().split("\n").map(r => r.split(","));
-    const bookings = [];
-    for (let i = 1; i < rows.length; i++) {
-        let [cliente, camera, checkinStr, nottiStr] = rows[i];
-        let checkin = new Date(checkinStr);
-        let notti = parseInt(nottiStr);
-        let checkout = new Date(checkin);
-        checkout.setDate(checkin.getDate() + notti);
-        bookings.push({ cliente, camera, checkin, checkout, notti });
-    }
+// parse DD/MM/YYYY
+function parseItDate(str){
+  if(!str) return null;
+  const parts = String(str).trim().split('/').map(s=>s.trim());
+  if(parts.length < 3) return null;
+  const d = parseInt(parts[0],10), m = parseInt(parts[1],10)-1, y = parseInt(parts[2],10);
+  if(Number.isNaN(d) || Number.isNaN(m) || Number.isNaN(y)) return null;
+  return new Date(y,m,d);
+}
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function formatDDMMYYYY(d){ if(!d) return ''; const dd = String(d.getDate()).padStart(2,'0'); const mm = String(d.getMonth()+1).padStart(2,'0'); return dd + '/' + mm + '/' + d.getFullYear(); }
+
+// load & render
+async function loadAndRender(){
+  try{
+    const res = await fetch(CSV_URL + "&t=" + Date.now(), {cache: "no-store"});
+    if(!res.ok) throw new Error('Errore download CSV: ' + res.status);
+    const txt = await res.text();
+    const rows = parseCSV(txt);
+    if(rows.length <= 1){ document.getElementById('container').innerHTML = '<div style="padding:18px;color:#666">Foglio vuoto o formato non riconosciuto.</div>'; return; }
+    const dataRows = rows.slice(1).filter(r=> r.length >= 4 && (r[0]||r[1]||r[2]||r[3]));
+    const bookings = dataRows.map(r => {
+      const cliente = r[0] || '';
+      const camereRaw = r[1] || '';
+      const camere = camereRaw.split(/[,;|\/ ]+/).map(x=>x.trim()).filter(x=>x).map(x => (/^\d+$/.test(x) ? ('Camera ' + x) : x));
+      const checkin = parseItDate(r[2]);
+      const notti = parseInt(r[3]) || 0;
+      const checkout = checkin ? addDays(checkin, notti) : null;
+      return {cliente,camere,checkin,checkout,notti};
+    });
     renderPlanner(bookings);
-});
+  }catch(err){
+    document.getElementById('container').innerHTML = '<div style="padding:18px;color:#b91c1c">Errore: '+String(err.message)+'</div>';
+    console.error(err);
+  }
+}
 
-function renderPlanner(bookings) {
-    const container = document.getElementById("planner");
-    let html = "<table>";
-    
-    // Header con giorni
-    html += "<tr><th>Camera</th>";
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        let dayClass = (sameDate(d, today)) ? "today" : "";
-        html += `<th class="${dayClass}">${d.getDate()}</th>`;
+function renderPlanner(bookings){
+  const container = document.getElementById('container');
+  container.innerHTML = '';
+  const italianWeek = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const today = new Date();
+  const todayY = today.getFullYear();
+  const todayM = today.getMonth();
+  const todayD = today.getDate();
+
+  for(let month=0; month<12; month++){
+    const daysInMonth = new Date(YEAR, month+1, 0).getDate();
+    const monthDiv = document.createElement('section'); monthDiv.className='month'; monthDiv.setAttribute('aria-label','Mese ' + (month+1));
+    const header = document.createElement('div'); header.className='month-header';
+    const title = document.createElement('div'); title.className='month-title'; title.textContent = new Date(YEAR,month,1).toLocaleString('it-IT',{month:'long', year:'numeric'});
+    header.appendChild(title); monthDiv.appendChild(header);
+
+    // header row (days labels)
+    const headRow = document.createElement('div'); headRow.className='row';
+    const roomHead = document.createElement('div'); roomHead.className='room-col'; roomHead.textContent = 'Camera';
+    headRow.appendChild(roomHead);
+    const daysHead = document.createElement('div'); daysHead.className='days';
+    for(let d=1; d<=daysInMonth; d++){
+      const dayEl = document.createElement('div'); dayEl.className='day day-header';
+      const dt = new Date(YEAR, month, d);
+      const w = italianWeek[dt.getDay()];
+      dayEl.innerHTML = `<div style="font-weight:700">${d}</div><div style="font-size:11px;color:#6b7280">${w}</div>`;
+      // mark current day header
+      if(YEAR === todayY && month === todayM && d === todayD){
+        dayEl.classList.add('today');
+      }
+      daysHead.appendChild(dayEl);
     }
-    html += "</tr>";
+    headRow.appendChild(daysHead); monthDiv.appendChild(headRow);
 
-    // Camere
-    const camere = ["Camera 1", "Camera 2", "Camera 3"];
-    camere.forEach(camera => {
-        html += `<tr><th>${camera}</th>`;
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-            html += `<td></td>`;
+    // room rows
+    ROOMS.forEach((room, roomIndex) => {
+      const row = document.createElement('div'); row.className='row';
+      const roomCol = document.createElement('div'); roomCol.className='room-col'; roomCol.textContent = room; row.appendChild(roomCol);
+      const daysEl = document.createElement('div'); daysEl.className='days';
+      for(let d=1; d<=daysInMonth; d++){ const cell = document.createElement('div'); cell.className='day'; 
+        // mark current day cell
+        if(YEAR === todayY && month === todayM && d === todayD){
+          cell.classList.add('today');
         }
-        html += "</tr>";
+        daysEl.appendChild(cell); }
+      row.appendChild(daysEl);
+
+      // add bars for bookings overlapping this month & room
+      bookings.forEach(b => {
+        if(!b.checkin || !b.checkout) return;
+        if(!b.camere.some(c => c === room)) return;
+        const monthStart = new Date(YEAR, month, 1);
+        const monthEnd = new Date(YEAR, month, daysInMonth);
+        const bStart = b.checkin;
+        const bEnd = b.checkout;
+        if(bEnd <= monthStart || bStart > addDays(monthEnd,1)) return; // no overlap
+        // visible start (days units, 0-based), half-cell logic: check-in starts at right half of day
+        let visStart = 0;
+        if(bStart.getFullYear()===YEAR && bStart.getMonth()===month){
+          visStart = (bStart.getDate()-1) + 0.5; // start at half cell (right half)
+        } else {
+          visStart = 0;
+        }
+        // visible end: checkout ends at left half of checkout day (so exclusive midpoint)
+        let visEnd = daysInMonth;
+        if(bEnd.getFullYear()===YEAR && bEnd.getMonth()===month){
+          visEnd = (bEnd.getDate()-1) + 0.5; // end at half cell (left half of checkout day)
+        } else {
+          visEnd = daysInMonth;
+        }
+        const units = visEnd - visStart;
+        if(units <= 0) return;
+        // create bar
+        const bar = document.createElement('div'); bar.className='bar';
+        const now = new Date();
+        if(b.checkout <= now) bar.classList.add('past');
+        else if(b.checkin <= now && b.checkout > now) bar.classList.add('current');
+        else bar.classList.add('future');
+        const leftPct = (visStart / daysInMonth) * 100;
+        const widthPct = (units / daysInMonth) * 100;
+        bar.style.left = leftPct + '%';
+        bar.style.width = widthPct + '%';
+        const minUnitsFull = 1.2;
+        if(units >= minUnitsFull){ bar.textContent = b.cliente; }
+        else { bar.textContent = b.cliente.split(/\s+/).map(x=>x[0]||'').join('').toUpperCase(); }
+        // attach metadata
+        bar.dataset.cliente = b.cliente;
+        bar.dataset.camere = b.camere.join(', ');
+        bar.dataset.checkin = formatDDMMYYYY(b.checkin);
+        bar.dataset.checkout = formatDDMMYYYY(b.checkout);
+        bar.dataset.notti = b.notti;
+        bar.addEventListener('click', (e)=>{ e.stopPropagation(); showModal({
+          cliente: bar.dataset.cliente, camere: bar.dataset.camere, checkin: bar.dataset.checkin, checkout: bar.dataset.checkout, notti: bar.dataset.notti
+        }); });
+        daysEl.appendChild(bar);
+      });
+
+      monthDiv.appendChild(row);
     });
 
-    html += "</table>";
-    container.innerHTML = html;
+    container.appendChild(monthDiv);
+  }
 
-    // Inserimento prenotazioni
-    const table = container.querySelector("table");
-    bookings.forEach(b => {
-        let rowIndex = camere.indexOf(b.camera) + 1;
-        if (rowIndex <= 0) return;
-        let startOffset = Math.floor((b.checkin - startDate) / (1000*60*60*24));
-        let length = Math.floor((b.checkout - b.checkin) / (1000*60*60*24));
+  // alternate backgrounds and current-day already set per element
+  applyAlternateDayBackgrounds();
+  // set day widths so bars align exactly
+  adjustDayWidths();
+}
 
-        let colorClass = b.checkout < today ? "past" :
-                         b.checkin > today ? "future" : "active";
-
-        let row = table.rows[rowIndex];
-        let startCell = row.cells[startOffset + 1];
-        if (!startCell) return;
-
-        let bookingDiv = document.createElement("div");
-        bookingDiv.className = `booking ${colorClass}`;
-        bookingDiv.style.left = "50%";
-        bookingDiv.style.width = `${(length - 1) * 100 + 50}%`;
-        bookingDiv.innerHTML = `${b.cliente} <span class="tooltip">${b.cliente} - ${b.camera}<br>Check-in: ${b.checkin.toLocaleDateString()}<br>Check-out: ${b.checkout.toLocaleDateString()}<br>Notti: ${b.notti}</span>`;
-
-        startCell.appendChild(bookingDiv);
+function applyAlternateDayBackgrounds(){
+  const months = document.querySelectorAll('.month');
+  months.forEach(mon => {
+    const dayHeaders = mon.querySelectorAll('.day-header');
+    if(dayHeaders.length===0) return;
+    const daysCount = dayHeaders.length;
+    // header alternation
+    dayHeaders.forEach((h,i) => {
+      h.classList.remove('alt','alt2');
+      h.classList.add((i%2===0)?'alt':'alt2');
     });
+    // apply to each room row cells by column index
+    const roomRows = Array.from(mon.querySelectorAll('.row')).slice(1); // skip header row
+    for(let col=0; col<daysCount; col++){
+      const cls = (col%2===0)?'alt':'alt2';
+      roomRows.forEach(rr => {
+        const cell = rr.querySelectorAll('.day')[col];
+        if(cell){ cell.classList.remove('alt','alt2'); cell.classList.add(cls); }
+      });
+    }
+  });
 }
 
-function sameDate(d1, d2) {
-    return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth() === d2.getMonth() &&
-           d1.getDate() === d2.getDate();
+function adjustDayWidths(){
+  const months = document.querySelectorAll('.month');
+  months.forEach(mon => {
+    const headers = mon.querySelectorAll('.day-header');
+    if(headers.length === 0) return;
+    const monthRect = mon.getBoundingClientRect();
+    const roomColWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--room-col-width')) || 140;
+    const available = Math.max(monthRect.width - roomColWidth - 40, 300);
+    const daysCount = headers.length;
+    const desired = Math.floor(available / daysCount);
+    const dayWidth = Math.max(desired, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--day-min-width')) || 18);
+    headers.forEach(h => h.style.flex = '0 0 ' + dayWidth + 'px');
+    const roomRows = mon.querySelectorAll('.row');
+    roomRows.forEach((rr, idx) => {
+      if(idx === 0) continue; // skip header row
+      const cells = rr.querySelectorAll('.day');
+      cells.forEach(c => c.style.flex = '0 0 ' + dayWidth + 'px');
+    });
+    // After widths set, bars positioned with percent will match cells visually.
+  });
 }
+
+// modal
+let modal=null;
+function showModal(data){
+  if(modal) modal.remove();
+  modal = document.createElement('div'); modal.className='modal-overlay';
+  modal.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><button class="close" aria-label="Chiudi">✕</button><h3>${data.cliente}</h3><p><strong>Camere:</strong> ${data.camere}</p><p><strong>Check-in:</strong> ${data.checkin}</p><p><strong>Check-out:</strong> ${data.checkout}</p><p><strong>Notti:</strong> ${data.notti}</p></div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('.close').addEventListener('click', ()=> { modal.remove(); modal=null; });
+  modal.addEventListener('click', (ev)=>{ if(ev.target === modal){ modal.remove(); modal=null; } });
+}
+
+// init
+loadAndRender();
+setInterval(loadAndRender, REFRESH_MS);
+window.addEventListener('resize', ()=> setTimeout(adjustDayWidths,120));
 </script>
-
 </body>
 </html>

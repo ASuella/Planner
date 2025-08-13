@@ -1,204 +1,169 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<title>PLANNING POGGIO 2025</title>
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f4f4;
-        margin: 0;
-        padding: 0;
-    }
-    h1 {
-        text-align: center;
-        font-size: 28px;
-        font-weight: bold;
-        background: linear-gradient(to right, #4facfe, #00f2fe);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        padding: 20px 0;
-    }
-    .calendar {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 10px;
-    }
-    .month {
-        width: 100%;
-        max-width: 1200px;
-        border-collapse: collapse;
-        margin-bottom: 40px;
-    }
-    .month caption {
-        text-align: left;
-        font-size: 20px;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    .month th, .month td {
-        border: 1px solid #ccc;
-        text-align: center;
-        height: 40px;
-        position: relative;
-        min-width: 50px;
-    }
-    .day-header {
-        background-color: #f0f0f0;
-        font-weight: bold;
-        font-size: 12px;
-    }
-    .today {
-        background-color: rgba(255, 255, 0, 0.3);
-    }
-    .booking-bar {
-        position: absolute;
-        height: 100%;
-        color: white;
-        font-size: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        padding: 0 5px;
-    }
-    .past { background-color: #e74c3c; }
-    .current { background-color: #27ae60; }
-    .future { background-color: #3498db; }
-    .tooltip {
-        visibility: hidden;
-        background-color: #333;
-        color: #fff;
-        text-align: left;
-        border-radius: 6px;
-        padding: 5px;
-        position: absolute;
-        z-index: 100;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 12px;
-        white-space: nowrap;
-    }
-    .booking-bar:hover .tooltip {
-        visibility: visible;
-    }
-</style>
+    <meta charset="UTF-8">
+    <title>PLANNING POGGIO 2025</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            background: linear-gradient(90deg, #3b82f6, #9333ea);
+            color: white;
+            padding: 15px;
+            margin: 0;
+        }
+        .planner {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .planner th, .planner td {
+            border: 1px solid #ccc;
+            text-align: center;
+            height: 40px;
+            position: relative;
+        }
+        .month-row {
+            background-color: #e2e8f0;
+            font-weight: bold;
+            text-align: left;
+            padding-left: 10px;
+        }
+        .day-header {
+            font-size: 0.8em;
+            color: #555;
+        }
+        .booking-bar {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .past { background-color: #ef4444; }
+        .active { background-color: #22c55e; }
+        .future { background-color: #3b82f6; }
+        .today-highlight {
+            background-color: #fde68a !important;
+        }
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            display: none;
+            z-index: 100;
+        }
+    </style>
 </head>
 <body>
+    <h1>PLANNING POGGIO 2025</h1>
+    <table class="planner" id="planner"></table>
+    <div class="tooltip" id="tooltip"></div>
 
-<h1>PLANNING POGGIO 2025</h1>
-<div class="calendar" id="calendar"></div>
+    <script>
+        const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32ylCoynwf1H44moYbc5n42UMdGEHUtzE6SZ7kc1P7rcwA-NkAEpck9jO0bVRWYRcakvb0VEd5cEJ/pub?gid=0&single=true&output=csv";
 
-<script>
-// CONFIGURAZIONE
-const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32ylCoynwf1H44moYbc5n42UMdGEHUtzE6SZ7kc1P7rcwA-NkAEpck9jO0bVRWYRcakvb0VEd5cEJ/pub?gid=0&single=true&output=csv";
-const rooms = ["Camera 1", "Camera 2", "Camera 3"];
-const today = new Date();
-today.setHours(0,0,0,0);
+        const monthNames = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+        const dayNames = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
 
-// FUNZIONE PER CREARE IL CALENDARIO
-function generateCalendar(bookings) {
-    const calendarDiv = document.getElementById("calendar");
-    calendarDiv.innerHTML = "";
+        async function loadData() {
+            const res = await fetch(sheetUrl);
+            const text = await res.text();
+            const rows = text.trim().split("\n").map(r => r.split(","));
+            return rows.slice(1).map(r => ({
+                cliente: r[0],
+                camera: r[1],
+                checkin: new Date(r[2]),
+                notti: parseInt(r[3])
+            }));
+        }
 
-    for (let month = 0; month < 12; month++) {
-        const monthStart = new Date(2025, month, 1);
-        const monthEnd = new Date(2025, month + 1, 0);
-        const daysInMonth = monthEnd.getDate();
+        function buildPlanner(bookings) {
+            const planner = document.getElementById("planner");
+            planner.innerHTML = "";
 
-        const table = document.createElement("table");
-        table.className = "month";
+            const startDate = new Date(2025, 0, 1);
+            const endDate = new Date(2025, 11, 31);
+            const today = new Date();
 
-        const caption = document.createElement("caption");
-        caption.textContent = monthStart.toLocaleString("it-IT", { month: "long", year: "numeric" });
-        table.appendChild(caption);
-
-        // Intestazione giorni
-        const headerRow = document.createElement("tr");
-        headerRow.innerHTML = "<th>Camera</th>" + Array.from({ length: daysInMonth }, (_, i) => {
-            const dayDate = new Date(2025, month, i + 1);
-            const dayName = dayDate.toLocaleDateString("it-IT", { weekday: "short" });
-            return `<th class="day-header ${isToday(dayDate) ? 'today' : ''}">${i+1} ${dayName}</th>`;
-        }).join("");
-        table.appendChild(headerRow);
-
-        // Riga per ogni camera
-        rooms.forEach(room => {
-            const row = document.createElement("tr");
-            row.innerHTML = `<td>${room}</td>` + Array.from({ length: daysInMonth }, (_, i) => {
-                const dayDate = new Date(2025, month, i + 1);
-                return `<td class="${isToday(dayDate) ? 'today' : ''}"></td>`;
-            }).join("");
-            table.appendChild(row);
-        });
-
-        calendarDiv.appendChild(table);
-
-        // Inserisci prenotazioni
-        bookings.forEach(b => {
-            if (!rooms.includes(b.camera)) return;
-
-            const start = new Date(b.checkin);
-            const end = new Date(start);
-            end.setDate(start.getDate() + b.notti);
-
-            if (start.getMonth() === month || end.getMonth() === month) {
-                const startDay = start.getMonth() === month ? start.getDate() : 1;
-                const endDay = end.getMonth() === month ? end.getDate() : daysInMonth;
-
-                const tableRows = table.querySelectorAll("tr");
-                const rowIndex = rooms.indexOf(b.camera) + 1;
-                const startCell = tableRows[rowIndex].cells[startDay];
-                const bar = document.createElement("div");
-
-                const bookingStatus = end < today ? "past" : start > today ? "future" : "current";
-                bar.className = `booking-bar ${bookingStatus}`;
-                bar.style.left = (startDay === start.getDate() ? "50%" : "0");
-                bar.style.width = `calc(${(endDay - startDay) * 100}% - ${(startDay === start.getDate() ? 0.5 : 0) * 50}px)`;
-                bar.textContent = b.notti <= 1 ? b.cliente[0] + "." : b.cliente;
-
-                // Tooltip
-                const tooltip = document.createElement("div");
-                tooltip.className = "tooltip";
-                tooltip.innerHTML = `
-                    <strong>${b.cliente}</strong><br>
-                    Camera: ${b.camera}<br>
-                    Check-in: ${start.toLocaleDateString("it-IT")}<br>
-                    Check-out: ${end.toLocaleDateString("it-IT")}<br>
-                    Notti: ${b.notti}
-                `;
-                bar.appendChild(tooltip);
-
-                startCell.appendChild(bar);
+            // Header row
+            let headerRow = "<tr><th>Camera</th>";
+            for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                const dayClass = d.toDateString() === today.toDateString() ? "today-highlight" : "";
+                headerRow += `<th class="${dayClass}"><div>${dayNames[d.getDay()]}<br>${d.getDate()}</div></th>`;
             }
-        });
-    }
-}
+            headerRow += "</tr>";
+            planner.innerHTML += headerRow;
 
-function isToday(date) {
-    return date.getTime() === today.getTime();
-}
+            // Rooms rows
+            const rooms = ["Camera 1", "Camera 2", "Camera 3"];
+            rooms.forEach(room => {
+                let rowHtml = `<tr><td>${room}</td>`;
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+                    rowHtml += `<td></td>`;
+                }
+                rowHtml += "</tr>";
+                planner.innerHTML += rowHtml;
+            });
 
-// FUNZIONE PER CARICARE I DATI DAL CSV
-async function loadBookings() {
-    const res = await fetch(sheetURL + "&t=" + new Date().getTime());
-    const text = await res.text();
-    const rows = text.trim().split("\n").slice(1); // salta intestazione
-    const bookings = rows.map(row => {
-        const [cliente, camera, checkin, notti] = row.split(",");
-        return { cliente, camera, checkin, notti: parseInt(notti) };
-    });
-    generateCalendar(bookings);
-}
+            // Draw bookings
+            bookings.forEach(b => {
+                const rowIndex = rooms.indexOf(b.camera) + 1;
+                if (rowIndex < 0) return;
 
-// Aggiorna ogni 5 minuti
-loadBookings();
-setInterval(loadBookings, 300000);
-</script>
+                const checkinIndex = Math.floor((b.checkin - startDate) / (1000*60*60*24)) + 1;
+                const checkout = new Date(b.checkin);
+                checkout.setDate(checkout.getDate() + b.notti);
+                const checkoutIndex = Math.floor((checkout - startDate) / (1000*60*60*24)) + 1;
+
+                let statusClass = "future";
+                if (checkout < today) statusClass = "past";
+                else if (b.checkin <= today && checkout >= today) statusClass = "active";
+
+                const tableRow = planner.rows[rowIndex];
+                const firstCell = tableRow.cells[checkinIndex];
+                const lastCell = tableRow.cells[checkoutIndex - 1];
+
+                if (firstCell) {
+                    const bar = document.createElement("div");
+                    bar.className = `booking-bar ${statusClass}`;
+                    bar.style.left = "50%";
+                    bar.style.width = ((checkoutIndex - checkinIndex) * 100 - 50) + "%";
+                    bar.textContent = (checkoutIndex - checkinIndex >= 2) ? b.cliente : b.cliente.charAt(0);
+                    
+                    bar.addEventListener("mouseenter", (e) => {
+                        const tooltip = document.getElementById("tooltip");
+                        tooltip.style.display = "block";
+                        tooltip.innerHTML = `<strong>${b.cliente}</strong><br>Camera: ${b.camera}<br>Check-in: ${b.checkin.toLocaleDateString()}<br>Check-out: ${checkout.toLocaleDateString()}<br>Notti: ${b.notti}`;
+                        tooltip.style.left = (e.pageX + 10) + "px";
+                        tooltip.style.top = (e.pageY + 10) + "px";
+                    });
+                    bar.addEventListener("mouseleave", () => {
+                        document.getElementById("tooltip").style.display = "none";
+                    });
+
+                    firstCell.appendChild(bar);
+                }
+            });
+        }
+
+        loadData().then(buildPlanner);
+        setInterval(() => loadData().then(buildPlanner), 300000);
+    </script>
 </body>
 </html>
+ 

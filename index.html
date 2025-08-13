@@ -1,171 +1,204 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PLANNING POGGIO 2025</title>
 <style>
     body {
         font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
         margin: 0;
         padding: 0;
-        background-color: #f5f5f5;
     }
     h1 {
         text-align: center;
-        background: linear-gradient(90deg, #3b82f6, #06b6d4);
+        font-size: 28px;
+        font-weight: bold;
+        background: linear-gradient(to right, #4facfe, #00f2fe);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 2.2em;
         padding: 20px 0;
     }
-    table {
-        border-collapse: collapse;
-        width: 100%;
+    .calendar {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
     }
-    th, td {
+    .month {
+        width: 100%;
+        max-width: 1200px;
+        border-collapse: collapse;
+        margin-bottom: 40px;
+    }
+    .month caption {
+        text-align: left;
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    .month th, .month td {
         border: 1px solid #ccc;
         text-align: center;
-        padding: 0;
+        height: 40px;
         position: relative;
-        min-width: 28px;
+        min-width: 50px;
     }
-    th {
-        background-color: #eee;
+    .day-header {
+        background-color: #f0f0f0;
+        font-weight: bold;
+        font-size: 12px;
     }
-    .day-column-today {
-        background-color: rgba(255, 255, 0, 0.2);
+    .today {
+        background-color: rgba(255, 255, 0, 0.3);
     }
-    .reservation {
+    .booking-bar {
         position: absolute;
-        top: 0;
-        bottom: 0;
+        height: 100%;
         color: white;
+        font-size: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
-        border-radius: 6px;
-        font-size: 0.9em;
+        border-radius: 8px;
         overflow: hidden;
         white-space: nowrap;
+        text-overflow: ellipsis;
+        padding: 0 5px;
     }
-    .past { background-color: #ef4444; }
-    .present { background-color: #22c55e; }
-    .future { background-color: #3b82f6; }
+    .past { background-color: #e74c3c; }
+    .current { background-color: #27ae60; }
+    .future { background-color: #3498db; }
+    .tooltip {
+        visibility: hidden;
+        background-color: #333;
+        color: #fff;
+        text-align: left;
+        border-radius: 6px;
+        padding: 5px;
+        position: absolute;
+        z-index: 100;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        white-space: nowrap;
+    }
+    .booking-bar:hover .tooltip {
+        visibility: visible;
+    }
 </style>
 </head>
 <body>
+
 <h1>PLANNING POGGIO 2025</h1>
-<div style="overflow-x:auto;">
-<table id="planner"></table>
-</div>
+<div class="calendar" id="calendar"></div>
 
 <script>
-const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32ylCoynwf1H44moYbc5n42UMdGEHUtzE6SZ7kc1P7rcwA-NkAEpck9jO0bVRWYRcakvb0VEd5cEJ/pub?gid=0&single=true&output=csv";
+// CONFIGURAZIONE
+const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32ylCoynwf1H44moYbc5n42UMdGEHUtzE6SZ7kc1P7rcwA-NkAEpck9jO0bVRWYRcakvb0VEd5cEJ/pub?gid=0&single=true&output=csv";
+const rooms = ["Camera 1", "Camera 2", "Camera 3"];
+const today = new Date();
+today.setHours(0,0,0,0);
 
-function loadPlanner() {
-    fetch(sheetUrl)
-    .then(res => res.text())
-    .then(csv => {
-        const rows = csv.trim().split("\n").map(r => r.split(","));
-        renderPlanner(rows);
-    });
-}
+// FUNZIONE PER CREARE IL CALENDARIO
+function generateCalendar(bookings) {
+    const calendarDiv = document.getElementById("calendar");
+    calendarDiv.innerHTML = "";
 
-function renderPlanner(data) {
-    const table = document.getElementById("planner");
-    table.innerHTML = "";
+    for (let month = 0; month < 12; month++) {
+        const monthStart = new Date(2025, month, 1);
+        const monthEnd = new Date(2025, month + 1, 0);
+        const daysInMonth = monthEnd.getDate();
 
-    const rooms = ["Camera 1", "Camera 2", "Camera 3"];
-    const startDate = new Date("2025-01-01");
-    const endDate = new Date("2025-12-31");
-    const days = [];
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate()+1)) {
-        days.push(new Date(d));
-    }
+        const table = document.createElement("table");
+        table.className = "month";
 
-    // intestazione
-    const header = document.createElement("tr");
-    const thEmpty = document.createElement("th");
-    header.appendChild(thEmpty);
-    days.forEach(day => {
-        const th = document.createElement("th");
-        th.textContent = day.getDate();
-        if (isToday(day)) th.classList.add("day-column-today");
-        header.appendChild(th);
-    });
-    table.appendChild(header);
+        const caption = document.createElement("caption");
+        caption.textContent = monthStart.toLocaleString("it-IT", { month: "long", year: "numeric" });
+        table.appendChild(caption);
 
-    // righe camere
-    rooms.forEach(room => {
-        const tr = document.createElement("tr");
-        const tdRoom = document.createElement("td");
-        tdRoom.textContent = room;
-        tdRoom.style.fontWeight = "bold";
-        tr.appendChild(tdRoom);
+        // Intestazione giorni
+        const headerRow = document.createElement("tr");
+        headerRow.innerHTML = "<th>Camera</th>" + Array.from({ length: daysInMonth }, (_, i) => {
+            const dayDate = new Date(2025, month, i + 1);
+            const dayName = dayDate.toLocaleDateString("it-IT", { weekday: "short" });
+            return `<th class="day-header ${isToday(dayDate) ? 'today' : ''}">${i+1} ${dayName}</th>`;
+        }).join("");
+        table.appendChild(headerRow);
 
-        days.forEach(() => {
-            const td = document.createElement("td");
-            tr.appendChild(td);
+        // Riga per ogni camera
+        rooms.forEach(room => {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td>${room}</td>` + Array.from({ length: daysInMonth }, (_, i) => {
+                const dayDate = new Date(2025, month, i + 1);
+                return `<td class="${isToday(dayDate) ? 'today' : ''}"></td>`;
+            }).join("");
+            table.appendChild(row);
         });
 
-        table.appendChild(tr);
-    });
+        calendarDiv.appendChild(table);
 
-    // aggiunta prenotazioni
-    for (let i = 1; i < data.length; i++) {
-        const [cliente, camera, checkinStr, nottiStr] = data[i];
-        const checkin = new Date(checkinStr);
-        const notti = parseInt(nottiStr);
-        const checkout = new Date(checkin);
-        checkout.setDate(checkin.getDate() + notti);
+        // Inserisci prenotazioni
+        bookings.forEach(b => {
+            if (!rooms.includes(b.camera)) return;
 
-        const today = new Date();
-        let status = "future";
-        if (checkout < today) status = "past";
-        else if (checkin <= today && checkout >= today) status = "present";
+            const start = new Date(b.checkin);
+            const end = new Date(start);
+            end.setDate(start.getDate() + b.notti);
 
-        const roomIndex = rooms.indexOf(camera);
-        if (roomIndex === -1) continue;
+            if (start.getMonth() === month || end.getMonth() === month) {
+                const startDay = start.getMonth() === month ? start.getDate() : 1;
+                const endDay = end.getMonth() === month ? end.getDate() : daysInMonth;
 
-        const tr = table.rows[roomIndex + 1];
-        let startIndex = days.findIndex(d => sameDay(d, checkin));
-        let endIndex = days.findIndex(d => sameDay(d, checkout));
+                const tableRows = table.querySelectorAll("tr");
+                const rowIndex = rooms.indexOf(b.camera) + 1;
+                const startCell = tableRows[rowIndex].cells[startDay];
+                const bar = document.createElement("div");
 
-        if (startIndex === -1 || endIndex === -1) continue;
+                const bookingStatus = end < today ? "past" : start > today ? "future" : "current";
+                bar.className = `booking-bar ${bookingStatus}`;
+                bar.style.left = (startDay === start.getDate() ? "50%" : "0");
+                bar.style.width = `calc(${(endDay - startDay) * 100}% - ${(startDay === start.getDate() ? 0.5 : 0) * 50}px)`;
+                bar.textContent = b.notti <= 1 ? b.cliente[0] + "." : b.cliente;
 
-        const bar = document.createElement("div");
-        bar.classList.add("reservation", status);
-        bar.textContent = cliente.length > 6 ? cliente.split(" ").map(n => n[0]).join("") : cliente;
+                // Tooltip
+                const tooltip = document.createElement("div");
+                tooltip.className = "tooltip";
+                tooltip.innerHTML = `
+                    <strong>${b.cliente}</strong><br>
+                    Camera: ${b.camera}<br>
+                    Check-in: ${start.toLocaleDateString("it-IT")}<br>
+                    Check-out: ${end.toLocaleDateString("it-IT")}<br>
+                    Notti: ${b.notti}
+                `;
+                bar.appendChild(tooltip);
 
-        // Calcolo posizione e larghezza
-        bar.style.left = `calc(${startIndex * 100 / days.length}% + 50%)`;
-        bar.style.width = `calc(${(endIndex - startIndex) * 100 / days.length}% - 50%)`;
-
-        tr.cells[startIndex + 1].appendChild(bar);
-
-        // Tooltip
-        bar.title = `Cliente: ${cliente}\nCamera: ${camera}\nCheck-in: ${checkin.toLocaleDateString()}\nCheck-out: ${checkout.toLocaleDateString()}\nNotti: ${notti}`;
+                startCell.appendChild(bar);
+            }
+        });
     }
 }
 
-function sameDay(d1, d2) {
-    return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth() === d2.getMonth() &&
-           d1.getDate() === d2.getDate();
+function isToday(date) {
+    return date.getTime() === today.getTime();
 }
 
-function isToday(d) {
-    const t = new Date();
-    return d.getDate() === t.getDate() &&
-           d.getMonth() === t.getMonth() &&
-           d.getFullYear() === t.getFullYear();
+// FUNZIONE PER CARICARE I DATI DAL CSV
+async function loadBookings() {
+    const res = await fetch(sheetURL + "&t=" + new Date().getTime());
+    const text = await res.text();
+    const rows = text.trim().split("\n").slice(1); // salta intestazione
+    const bookings = rows.map(row => {
+        const [cliente, camera, checkin, notti] = row.split(",");
+        return { cliente, camera, checkin, notti: parseInt(notti) };
+    });
+    generateCalendar(bookings);
 }
 
-loadPlanner();
-setInterval(loadPlanner, 300000); // refresh ogni 5 minuti
+// Aggiorna ogni 5 minuti
+loadBookings();
+setInterval(loadBookings, 300000);
 </script>
 </body>
 </html>

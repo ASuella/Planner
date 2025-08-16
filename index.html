@@ -6,8 +6,9 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+      background: #f4f4f4;
     }
 
     h1 {
@@ -17,7 +18,7 @@
       background: linear-gradient(90deg, #4facfe, #00f2fe);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 30px;
+      margin-bottom: 20px;
     }
 
     .month {
@@ -25,41 +26,54 @@
     }
 
     .month h2 {
-      margin-bottom: 10px;
+      margin: 10px 0;
       font-size: 20px;
       color: #333;
     }
 
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      table-layout: fixed;
-      margin-bottom: 20px;
-    }
-
-    th, td {
+    .planner {
+      display: grid;
+      grid-template-columns: 120px repeat(31, 1fr);
       border: 1px solid #ccc;
-      text-align: center;
-      padding: 5px;
-      position: relative;
+      background: white;
     }
 
-    th {
+    .planner .header {
       background: #eee;
+      text-align: center;
+      font-weight: bold;
+      padding: 5px;
+      border: 1px solid #ddd;
       font-size: 12px;
     }
 
-    .day-label {
-      font-size: 10px;
-      color: #666;
-      display: block;
+    .room {
+      display: contents;
+    }
+
+    .room-name {
+      background: #fafafa;
+      border: 1px solid #ddd;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .day {
+      border: 1px solid #eee;
+      position: relative;
+      min-height: 28px;
+    }
+
+    .day.today {
+      background: rgba(255, 223, 0, 0.3); /* evidenzia il giorno attuale */
     }
 
     .booking-bar {
       position: absolute;
-      top: 0;
-      bottom: 0;
-      margin: 2px 0;
+      top: 2px;
+      bottom: 2px;
       border-radius: 8px;
       display: flex;
       align-items: center;
@@ -70,147 +84,156 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      border: 1px solid #333; /* bordo aggiunto */
+      border: 2px solid black; /* bordo più visibile */
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
     }
 
-    .booking-future { background: #007bff; }
-    .booking-past { background: #dc3545; }
-    .booking-active { background: #28a745; }
-
-    .today {
-      background: #fffae6 !important;
+    .booking-bar.selected {
+      border: 3px solid #000; /* bordo più marcato quando selezionata */
+      box-shadow: 0 0 8px rgba(0,0,0,0.6);
+      z-index: 10;
     }
   </style>
 </head>
 <body>
   <h1>PLANNING POGGIO 2025</h1>
-  <div id="planner"></div>
+  <div id="planner-container"></div>
 
   <script>
     const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32ylCoynwf1H44moYbc5n42UMdGEHUtzE6SZ7kc1P7rcwA-NkAEpck9jO0bVRWYRcakvb0VEd5cEJ/pub?gid=0&single=true&output=csv";
 
-    const monthNames = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
-    const dayNames = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
-    const today = new Date();
+    const rooms = ["Camera 1", "Camera 2", "Camera 3"];
 
-    async function loadCSV() {
+    async function fetchData() {
       const res = await fetch(sheetUrl);
       const text = await res.text();
-      return text.split("\n").slice(1).map(row => {
-        const cols = row.split(",");
-        if (cols.length < 4) return null;
-        const cliente = cols[0].trim();
-        const camere = cols[1].trim();
-        const checkin = new Date(cols[2].trim());
-        const notti = parseInt(cols[3].trim());
-        if (!cliente || isNaN(checkin) || isNaN(notti)) return null;
-        const checkout = new Date(checkin);
-        checkout.setDate(checkin.getDate() + notti);
-        return { cliente, camere, checkin, checkout, notti };
-      }).filter(x => x);
+      return parseCSV(text);
+    }
+
+    function parseCSV(data) {
+      const rows = data.trim().split("\n").map(r => r.split(","));
+      rows.shift(); // rimuovi intestazioni
+      return rows.map(r => ({
+        cliente: r[0],
+        camera: r[1],
+        checkin: new Date(r[2]),
+        notti: parseInt(r[3], 10)
+      }));
     }
 
     function createPlanner(bookings) {
-      const planner = document.getElementById("planner");
-      planner.innerHTML = "";
+      const container = document.getElementById("planner-container");
+      container.innerHTML = "";
 
-      for (let m = 0; m < 12; m++) {
+      const today = new Date();
+
+      for (let month = 0; month < 12; month++) {
+        const firstDay = new Date(2025, month, 1);
+        const daysInMonth = new Date(2025, month + 1, 0).getDate();
+
         const monthDiv = document.createElement("div");
         monthDiv.className = "month";
+        monthDiv.innerHTML = `<h2>${firstDay.toLocaleString("it-IT", { month: "long", year: "numeric" })}</h2>`;
 
-        const title = document.createElement("h2");
-        title.textContent = monthNames[m];
-        monthDiv.appendChild(title);
+        const grid = document.createElement("div");
+        grid.className = "planner";
+        grid.style.gridTemplateColumns = `120px repeat(${daysInMonth}, 1fr)`;
 
-        const table = document.createElement("table");
-        const header = document.createElement("tr");
-        header.appendChild(document.createElement("th")).textContent = "Camera";
+        grid.appendChild(document.createElement("div")); // spazio vuoto
 
-        const daysInMonth = new Date(2025, m + 1, 0).getDate();
         for (let d = 1; d <= daysInMonth; d++) {
-          const th = document.createElement("th");
-          th.innerHTML = `${d}<span class="day-label">${dayNames[new Date(2025, m, d).getDay()]}</span>`;
-          if (today.getFullYear() === 2025 && today.getMonth() === m && today.getDate() === d) {
-            th.classList.add("today");
-          }
-          header.appendChild(th);
+          const dayName = new Date(2025, month, d).toLocaleDateString("it-IT", { weekday: "short" });
+          const cell = document.createElement("div");
+          cell.className = "header";
+          cell.textContent = `${dayName} ${d}`;
+          grid.appendChild(cell);
         }
-        table.appendChild(header);
 
-        ["Camera 1","Camera 2","Camera 3"].forEach(camera => {
-          const row = document.createElement("tr");
-          const tdCamera = document.createElement("td");
-          tdCamera.textContent = camera;
-          row.appendChild(tdCamera);
+        rooms.forEach(room => {
+          const nameCell = document.createElement("div");
+          nameCell.className = "room-name";
+          nameCell.textContent = room;
+          grid.appendChild(nameCell);
 
           for (let d = 1; d <= daysInMonth; d++) {
-            const td = document.createElement("td");
-            if (today.getFullYear() === 2025 && today.getMonth() === m && today.getDate() === d) {
-              td.classList.add("today");
+            const dayCell = document.createElement("div");
+            dayCell.className = "day";
+            const currentDate = new Date(2025, month, d);
+
+            if (currentDate.toDateString() === today.toDateString()) {
+              dayCell.classList.add("today");
             }
-            row.appendChild(td);
+
+            grid.appendChild(dayCell);
           }
-          table.appendChild(row);
         });
 
-        monthDiv.appendChild(table);
-        planner.appendChild(monthDiv);
+        monthDiv.appendChild(grid);
+        container.appendChild(monthDiv);
 
-        // Inserisci prenotazioni
         bookings.forEach(b => {
-          if (!b.camere.includes("Camera")) return;
-          const startMonth = b.checkin.getMonth();
-          const endMonth = b.checkout.getMonth();
-          if (m < startMonth || m > endMonth) return;
+          if (!b.camera.includes("Camera")) return;
 
-          b.camere.split("&").forEach(cameraName => {
-            cameraName = cameraName.trim();
-            const rows = table.querySelectorAll("tr");
-            let row;
-            rows.forEach(r => {
-              if (r.firstChild && r.firstChild.textContent === cameraName) row = r;
-            });
-            if (!row) return;
+          const checkin = new Date(b.checkin);
+          const checkout = new Date(checkin);
+          checkout.setDate(checkin.getDate() + b.notti);
 
-            const days = row.querySelectorAll("td");
-            let startDay = (m === startMonth) ? b.checkin.getDate() : 1;
-            let endDay = (m === endMonth) ? b.checkout.getDate() : days.length - 1;
+          if (checkin.getMonth() === month || checkout.getMonth() === month) {
+            const startDay = (checkin.getMonth() === month) ? checkin.getDate() : 1;
+            const endDay = (checkout.getMonth() === month) ? checkout.getDate() : daysInMonth;
 
-            const startCell = days[startDay];
-            const endCell = days[endDay - 1];
+            const rowIndex = rooms.indexOf(b.camera);
+            if (rowIndex === -1) return;
+
+            const startCellIndex = (daysInMonth * rowIndex) + startDay;
+            const endCellIndex = (daysInMonth * rowIndex) + endDay;
+
+            const startCell = grid.children[startCellIndex + 1]; 
+            const endCell = grid.children[endCellIndex + 1];   
+
             if (!startCell || !endCell) return;
 
             const bar = document.createElement("div");
             bar.className = "booking-bar";
 
-            // Stato prenotazione
             const now = new Date();
-            if (b.checkout <= now) bar.classList.add("booking-past");
-            else if (b.checkin > now) bar.classList.add("booking-future");
-            else bar.classList.add("booking-active");
+            if (checkout < now) {
+              bar.style.background = "red"; // passato
+            } else if (checkin > now) {
+              bar.style.background = "blue"; // futuro
+            } else {
+              bar.style.background = "green"; // attivo
+            }
 
             bar.textContent = b.cliente;
 
-            // Posizionamento grafico metà casella in/out
             const startRect = startCell.getBoundingClientRect();
             const endRect = endCell.getBoundingClientRect();
-            const offsetLeft = startCell.offsetLeft + startCell.offsetWidth / 2;
-            const offsetRight = endCell.offsetLeft + endCell.offsetWidth / 2 + endCell.offsetWidth;
 
-            bar.style.left = offsetLeft + "px";
-            bar.style.width = (offsetRight - offsetLeft) + "px";
+            const offsetLeft = (startDay === checkin.getDate()) ? "50%" : "0";
+            const offsetRight = (endDay === checkout.getDate()) ? "50%" : "0";
 
-            startCell.parentElement.appendChild(bar);
+            bar.style.left = offsetLeft;
+            bar.style.right = offsetRight;
 
-            // Tooltip al click
-            bar.title = `${b.cliente}\n${b.camere}\nCheck-in: ${b.checkin.toLocaleDateString()}\nCheck-out: ${b.checkout.toLocaleDateString()}\nNotti: ${b.notti}`;
-          });
+            startCell.style.position = "relative";
+            startCell.appendChild(bar);
+
+            // click per selezione
+            bar.addEventListener("click", () => {
+              document.querySelectorAll(".booking-bar.selected").forEach(b => {
+                b.classList.remove("selected");
+              });
+              bar.classList.add("selected");
+            });
+          }
         });
       }
     }
 
     async function init() {
-      const bookings = await loadCSV();
+      const bookings = await fetchData();
       createPlanner(bookings);
     }
 

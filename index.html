@@ -1,244 +1,377 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <title>PLANNING POGGIO 2025</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background: #f4f4f4;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PLANNING POGGIO 2025</title>
+<style>
+  :root{
+    --c-future:#3b82f6; /* blu */
+    --c-active:#22c55e; /* verde */
+    --c-past:#ef4444;   /* rosso */
+    --c-today:#fff3b0;  /* giallo leggero */
+    --grid-border:#d9dde3;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:#f7f9fc;
+    font-family: Arial, Helvetica, sans-serif;
+    color:#1f2937;
+  }
+  header{
+    padding:18px 16px 8px;
+    text-align:center;
+    background:linear-gradient(90deg,#4e54c8,#8f94fb);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    font-weight:800;
+    font-size:28px;
+  }
 
-    h1 {
-      text-align: center;
-      font-size: 28px;
-      font-weight: bold;
-      background: linear-gradient(90deg, #4facfe, #00f2fe);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 20px;
-    }
+  #planner{ display:block; padding:12px; }
 
-    .month {
-      margin-bottom: 40px;
-    }
+  .month-block{ display:block; margin:0 0 28px 0; }
+  .month-title{
+    font-weight:800; font-size:18px; margin:0 0 8px 2px;
+    text-transform:uppercase; letter-spacing:.02em; color:#111827;
+  }
 
-    .month h2 {
-      margin: 10px 0;
-      font-size: 20px;
-      color: #333;
-    }
+  .month-wrap{ overflow-x:auto; padding-bottom:6px; }
+  table.month{
+    border-collapse:separate; border-spacing:0;
+    border:1px solid var(--grid-border); background:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,.04);
+    table-layout:fixed; width:max-content;
+  }
+  thead th{
+    position:sticky; top:0; z-index:1;
+    background:#eceff4; border-bottom:1px solid var(--grid-border);
+    font-size:12px; font-weight:700; color:#475569;
+    text-align:center; padding:6px 4px; min-width:48px; height:36px;
+  }
+  .room-col{
+    position:sticky; left:0; z-index:2;
+    background:#f3f6fb; color:#111827; font-weight:800;
+    min-width:130px; width:130px; text-align:left; padding:0 10px;
+    border-right:1px solid var(--grid-border);
+  }
+  tbody th.room-col{ background:#f3f6fb; }
 
-    .planner {
-      display: grid;
-      grid-template-columns: 120px repeat(31, 1fr);
-      border: 1px solid #ccc;
-      background: white;
-    }
+  td{
+    position:relative;
+    width:48px; min-width:48px; height:42px;
+    border-left:1px solid var(--grid-border);
+    border-top:1px solid var(--grid-border);
+    background:#ffffff;
+  }
+  /* alternanza leggera colonna per leggere meglio i giorni */
+  td:nth-child(odd){ background:#fafbff; }
+  .today-col{ background:var(--c-today) !important; }
 
-    .planner .header {
-      background: #eee;
-      text-align: center;
-      font-weight: bold;
-      padding: 5px;
-      border: 1px solid #ddd;
-      font-size: 12px;
-    }
+  /* Barra prenotazione (v0.6 + miglior visibilità bordi) */
+  .booking{
+    position:absolute; top:2px; bottom:2px;
+    border-radius:10px;
+    color:#fff; font-weight:800; font-size:13px;
+    display:flex; align-items:center; justify-content:center;
+    padding:0 10px;
+    overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+    border:2px solid #000;           /* bordo ben visibile */
+    cursor:pointer;
+    transition:box-shadow .15s ease, border-width .15s ease, transform .05s ease;
+  }
+  .booking.future{ background:var(--c-future); }
+  .booking.active{ background:var(--c-active); }
+  .booking.past{   background:var(--c-past);   }
 
-    .room {
-      display: contents;
-    }
+  .booking.selected{
+    border-width:3px;                /* evidenziata al click */
+    box-shadow:0 0 10px rgba(0,0,0,.6);
+    z-index:20;
+  }
 
-    .room-name {
-      background: #fafafa;
-      border: 1px solid #ddd;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .day {
-      border: 1px solid #eee;
-      position: relative;
-      min-height: 28px;
-    }
-
-    .day.today {
-      background: rgba(255, 223, 0, 0.3); /* evidenzia il giorno attuale */
-    }
-
-    .booking-bar {
-      position: absolute;
-      top: 2px;
-      bottom: 2px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: bold;
-      color: white;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      border: 2px solid black; /* bordo più visibile */
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-    }
-
-    .booking-bar.selected {
-      border: 3px solid #000; /* bordo più marcato quando selezionata */
-      box-shadow: 0 0 8px rgba(0,0,0,0.6);
-      z-index: 10;
-    }
-  </style>
+  /* Tooltip */
+  .tooltip{
+    position:fixed; z-index:1000;
+    background:rgba(17,24,39,.95); color:#fff;
+    padding:8px 10px; border-radius:8px; font-size:12px; line-height:1.25;
+    display:none; box-shadow:0 8px 24px rgba(0,0,0,.18);
+    pointer-events:none; max-width:280px;
+  }
+</style>
 </head>
 <body>
-  <h1>PLANNING POGGIO 2025</h1>
-  <div id="planner-container"></div>
+  <header>PLANNING POGGIO 2025</header>
+  <div id="planner" aria-live="polite"></div>
+  <div id="tooltip" class="tooltip"></div>
 
-  <script>
-    const sheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32ylCoynwf1H44moYbc5n42UMdGEHUtzE6SZ7kc1P7rcwA-NkAEpck9jO0bVRWYRcakvb0VEd5cEJ/pub?gid=0&single=true&output=csv";
+<script>
+/* ====== CONFIG ====== */
+const SHEET_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT32ylCoynwf1H44moYbc5n42UMdGEHUtzE6SZ7kc1P7rcwA-NkAEpck9jO0bVRWYRcakvb0VEd5cEJ/pub?gid=0&single=true&output=csv";
+const ROOMS = ["Camera 1","Camera 2","Camera 3"];
+const YEAR = 2025;
+const DAY_ABBR = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
+const MONTH_NAMES = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 
-    const rooms = ["Camera 1", "Camera 2", "Camera 3"];
+/* ====== UTIL ====== */
+const today = (()=>{ const d=new Date(); d.setHours(0,0,0,0); return d; })();
 
-    async function fetchData() {
-      const res = await fetch(sheetUrl);
-      const text = await res.text();
-      return parseCSV(text);
+function parseItalianDate(str){
+  const s = (str||"").trim();
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (!m) return null;
+  const dd = +m[1], mm = +m[2], yyyy = +m[3];
+  const d = new Date(yyyy, mm-1, dd);
+  d.setHours(0,0,0,0);
+  return isNaN(d) ? null : d;
+}
+
+// CSV parser che gestisce campi fra doppi apici e virgole
+function csvToRows(csv){
+  const lines = csv.replace(/\r/g,"").split("\n").filter(Boolean);
+  return lines.map(line=>{
+    const out=[]; let cur=""; let q=false;
+    for (let i=0;i<line.length;i++){
+      const ch=line[i];
+      if (ch==='"'){ q=!q; continue; }
+      if (ch==="," && !q){ out.push(cur); cur=""; continue; }
+      cur+=ch;
     }
+    out.push(cur);
+    return out.map(s=>s.trim());
+  });
+}
 
-    function parseCSV(data) {
-      const rows = data.trim().split("\n").map(r => r.split(","));
-      rows.shift(); // rimuovi intestazioni
-      return rows.map(r => ({
-        cliente: r[0],
-        camera: r[1],
-        checkin: new Date(r[2]),
-        notti: parseInt(r[3], 10)
-      }));
+function fmtDayHeader(d){ return `${d.getDate()} ${DAY_ABBR[d.getDay()]}`; }
+
+function statusForRange(ci, co){
+  if (co < today) return "past";
+  if (ci > today) return "future";
+  return "active";
+}
+
+function roomsFromCell(cell){
+  // Accetta "1", "2,3", "1 & 3", "Camera 1" -> ritorna ["Camera 1", ...]
+  const nums = (cell||"").match(/\d+/g) || [];
+  return nums.map(n => `Camera ${Number(n)}`);
+}
+
+/* ====== DATA ====== */
+let latestBookings = [];
+
+async function fetchBookings(){
+  const res = await fetch(SHEET_CSV + "&t=" + Date.now()); // anti-cache
+  const text = await res.text();
+  const rows = csvToRows(text);
+  const body = rows[0] && /cliente/i.test(rows[0][0]) ? rows.slice(1) : rows;
+
+  const bookings = [];
+  for (const r of body){
+    const cliente = r[0] || "";
+    const roomCell = r[1] || "";
+    const checkin = parseItalianDate(r[2] || "");
+    const notti = parseInt(r[3] || "0", 10);
+    if (!cliente || !checkin || !Number.isFinite(notti) || notti<=0) continue;
+    const checkout = new Date(checkin); checkout.setDate(checkout.getDate()+notti);
+    const rooms = roomsFromCell(roomCell).filter(x=>ROOMS.includes(x));
+    if (rooms.length===0) continue;
+    bookings.push({ cliente, rooms, checkin, checkout, notti });
+  }
+  latestBookings = bookings;
+  return bookings;
+}
+
+/* ====== UI ====== */
+function buildEmptyMonthTable(monthIdx){
+  const daysInMonth = new Date(YEAR, monthIdx+1, 0).getDate();
+  const wrapper = document.createElement("div");
+  wrapper.className = "month-block";
+  wrapper.dataset.month = monthIdx;
+
+  const title = document.createElement("div");
+  title.className = "month-title";
+  title.textContent = `${MONTH_NAMES[monthIdx]} ${YEAR}`;
+  wrapper.appendChild(title);
+
+  const scroller = document.createElement("div");
+  scroller.className = "month-wrap";
+  wrapper.appendChild(scroller);
+
+  const table = document.createElement("table");
+  table.className = "month";
+  scroller.appendChild(table);
+
+  const thead = document.createElement("thead");
+  const trH = document.createElement("tr");
+
+  const thRoom = document.createElement("th");
+  thRoom.className = "room-col";
+  thRoom.textContent = "Camera";
+  trH.appendChild(thRoom);
+
+  for (let d=1; d<=daysInMonth; d++){
+    const date = new Date(YEAR, monthIdx, d); date.setHours(0,0,0,0);
+    const th = document.createElement("th");
+    th.textContent = fmtDayHeader(date);
+    if (date.getTime()===today.getTime()) th.classList.add("today-col");
+    trH.appendChild(th);
+  }
+  thead.appendChild(trH);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for (const room of ROOMS){
+    const tr = document.createElement("tr");
+    tr.style.position = "relative"; // ancoraggio delle barre
+    const thR = document.createElement("th");
+    thR.className = "room-col";
+    thR.textContent = room;
+    tr.appendChild(thR);
+
+    for (let d=1; d<=daysInMonth; d++){
+      const date = new Date(YEAR, monthIdx, d); date.setHours(0,0,0,0);
+      const td = document.createElement("td");
+      if (date.getTime()===today.getTime()) td.classList.add("today-col");
+      tr.appendChild(td);
     }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
 
-    function createPlanner(bookings) {
-      const container = document.getElementById("planner-container");
-      container.innerHTML = "";
+  return { wrapper, table, thead, tbody, monthIdx };
+}
 
-      const today = new Date();
+/* Calcolo left/width per la barra con regola metà-cella */
+function computeBarPosition(rowEl, monthIdx, checkin, checkout){
+  const daysInMonth = new Date(YEAR, monthIdx+1, 0).getDate();
+  const firstOfMonth = new Date(YEAR, monthIdx, 1); firstOfMonth.setHours(0,0,0,0);
+  const lastOfMonth  = new Date(YEAR, monthIdx+1, 0); lastOfMonth.setHours(23,59,59,999);
 
-      for (let month = 0; month < 12; month++) {
-        const firstDay = new Date(2025, month, 1);
-        const daysInMonth = new Date(2025, month + 1, 0).getDate();
+  // Limiti tagliati al mese
+  const startInMonth = checkin < firstOfMonth ? firstOfMonth : checkin;
+  const endInMonth   = checkout > lastOfMonth  ? lastOfMonth  : checkout;
 
-        const monthDiv = document.createElement("div");
-        monthDiv.className = "month";
-        monthDiv.innerHTML = `<h2>${firstDay.toLocaleString("it-IT", { month: "long", year: "numeric" })}</h2>`;
+  const sDay = startInMonth.getDate();
+  const eDay = endInMonth.getDate();
 
-        const grid = document.createElement("div");
-        grid.className = "planner";
-        grid.style.gridTemplateColumns = `120px repeat(${daysInMonth}, 1fr)`;
+  // Celle: index 0 = header camera; giorno N = cells[N]
+  const startCell = rowEl.cells[sDay];
+  const endCell   = rowEl.cells[eDay];
 
-        grid.appendChild(document.createElement("div")); // spazio vuoto
+  const rowRect = rowEl.getBoundingClientRect();
+  const sRect   = startCell.getBoundingClientRect();
+  const eRect   = endCell.getBoundingClientRect();
 
-        for (let d = 1; d <= daysInMonth; d++) {
-          const dayName = new Date(2025, month, d).toLocaleDateString("it-IT", { weekday: "short" });
-          const cell = document.createElement("div");
-          cell.className = "header";
-          cell.textContent = `${dayName} ${d}`;
-          grid.appendChild(cell);
-        }
+  const realStart = (checkin.getFullYear()===YEAR && checkin.getMonth()===monthIdx);
+  const realEnd   = (checkout.getFullYear()===YEAR && checkout.getMonth()===monthIdx);
 
-        rooms.forEach(room => {
-          const nameCell = document.createElement("div");
-          nameCell.className = "room-name";
-          nameCell.textContent = room;
-          grid.appendChild(nameCell);
+  const left = (sRect.left - rowRect.left) + (realStart ? sRect.width/2 : 0);
+  const right= (eRect.left - rowRect.left) + (realEnd ? eRect.width/2 : eRect.width);
+  const width = Math.max(0, right - left);
 
-          for (let d = 1; d <= daysInMonth; d++) {
-            const dayCell = document.createElement("div");
-            dayCell.className = "day";
-            const currentDate = new Date(2025, month, d);
+  return { left, width };
+}
 
-            if (currentDate.toDateString() === today.toDateString()) {
-              dayCell.classList.add("today");
-            }
+function placeBookingsIntoMonth(parts, monthBookings){
+  const { tbody, monthIdx } = parts;
 
-            grid.appendChild(dayCell);
-          }
-        });
+  monthBookings.forEach(b=>{
+    const status = statusForRange(b.checkin, b.checkout);
 
-        monthDiv.appendChild(grid);
-        container.appendChild(monthDiv);
+    for (const room of b.rooms){
+      const rIndex = ROOMS.indexOf(room);
+      if (rIndex===-1) continue;
+      const rowEl = tbody.rows[rIndex];
 
-        bookings.forEach(b => {
-          if (!b.camera.includes("Camera")) return;
+      // Se fuori dal mese, salta
+      const firstDayNextMonth = new Date(YEAR, monthIdx+1, 1);
+      if (b.checkout <= new Date(YEAR, monthIdx, 1) || b.checkin >= firstDayNextMonth) continue;
 
-          const checkin = new Date(b.checkin);
-          const checkout = new Date(checkin);
-          checkout.setDate(checkin.getDate() + b.notti);
+      const { left, width } = computeBarPosition(rowEl, monthIdx, b.checkin, b.checkout);
 
-          if (checkin.getMonth() === month || checkout.getMonth() === month) {
-            const startDay = (checkin.getMonth() === month) ? checkin.getDate() : 1;
-            const endDay = (checkout.getMonth() === month) ? checkout.getDate() : daysInMonth;
+      const bar = document.createElement("div");
+      bar.className = `booking ${status}`;
+      bar.style.left  = left + "px";
+      bar.style.width = width + "px";
+      bar.textContent = b.cliente; // ellissi se non c'è spazio
 
-            const rowIndex = rooms.indexOf(b.camera);
-            if (rowIndex === -1) return;
+      // Tooltip + selezione
+      bar.addEventListener("mouseenter", (e)=>showTip(e, b, room));
+      bar.addEventListener("mousemove",  (e)=>moveTip(e));
+      bar.addEventListener("mouseleave", hideTip);
+      bar.addEventListener("click", ()=>{
+        document.querySelectorAll(".booking.selected").forEach(el=>el.classList.remove("selected"));
+        bar.classList.add("selected");
+      });
 
-            const startCellIndex = (daysInMonth * rowIndex) + startDay;
-            const endCellIndex = (daysInMonth * rowIndex) + endDay;
-
-            const startCell = grid.children[startCellIndex + 1]; 
-            const endCell = grid.children[endCellIndex + 1];   
-
-            if (!startCell || !endCell) return;
-
-            const bar = document.createElement("div");
-            bar.className = "booking-bar";
-
-            const now = new Date();
-            if (checkout < now) {
-              bar.style.background = "red"; // passato
-            } else if (checkin > now) {
-              bar.style.background = "blue"; // futuro
-            } else {
-              bar.style.background = "green"; // attivo
-            }
-
-            bar.textContent = b.cliente;
-
-            const startRect = startCell.getBoundingClientRect();
-            const endRect = endCell.getBoundingClientRect();
-
-            const offsetLeft = (startDay === checkin.getDate()) ? "50%" : "0";
-            const offsetRight = (endDay === checkout.getDate()) ? "50%" : "0";
-
-            bar.style.left = offsetLeft;
-            bar.style.right = offsetRight;
-
-            startCell.style.position = "relative";
-            startCell.appendChild(bar);
-
-            // click per selezione
-            bar.addEventListener("click", () => {
-              document.querySelectorAll(".booking-bar.selected").forEach(b => {
-                b.classList.remove("selected");
-              });
-              bar.classList.add("selected");
-            });
-          }
-        });
-      }
+      rowEl.appendChild(bar);
     }
+  });
+}
 
-    async function init() {
-      const bookings = await fetchData();
-      createPlanner(bookings);
+/* Tooltip */
+function showTip(e, b, room){
+  const t = document.getElementById("tooltip");
+  const ci = b.checkin.toLocaleDateString("it-IT");
+  const co = b.checkout.toLocaleDateString("it-IT");
+  t.innerHTML = `<strong>${b.cliente}</strong><br>Camera: ${room}<br>Check-in: ${ci}<br>Check-out: ${co}<br>Notti: ${b.notti}`;
+  t.style.display="block";
+  moveTip(e);
+}
+function moveTip(e){
+  const t = document.getElementById("tooltip");
+  t.style.left = (e.clientX + 12) + "px";
+  t.style.top  = (e.clientY + 12) + "px";
+}
+function hideTip(){
+  document.getElementById("tooltip").style.display="none";
+}
+
+/* ====== RENDER ====== */
+let monthParts = [];
+
+async function render(bookings){
+  const planner = document.getElementById("planner");
+  planner.innerHTML = "";
+  monthParts = [];
+
+  // 1) costruisci le 12 griglie
+  for (let m=0; m<12; m++){
+    const parts = buildEmptyMonthTable(m);
+    planner.appendChild(parts.wrapper);
+    monthParts.push(parts);
+  }
+
+  // 2) dati (se non passati)
+  const data = bookings || await fetchBookings();
+
+  // 3) posiziona barre dopo che il DOM ha dimensioni calcolate
+  requestAnimationFrame(()=>{
+    for (const parts of monthParts){
+      const monthIdx = parts.monthIdx;
+      const monthBookings = data.filter(b =>
+        (b.checkin.getFullYear()===YEAR && b.checkin.getMonth()===monthIdx) ||
+        (b.checkout.getFullYear()===YEAR && b.checkout.getMonth()===monthIdx) ||
+        (b.checkin < new Date(YEAR, monthIdx+1, 1) && b.checkout > new Date(YEAR, monthIdx, 1))
+      );
+      placeBookingsIntoMonth(parts, monthBookings);
     }
+  });
+}
 
-    init();
-    setInterval(init, 5 * 60 * 1000); // refresh ogni 5 minuti
-  </script>
+// primo render
+fetchBookings().then(render);
+
+// refresh ogni 5 minuti
+setInterval(()=>fetchBookings().then(render), 5*60*1000);
+
+// ridisegna su resize (debounce)
+let _rsT=null;
+window.addEventListener("resize", ()=>{
+  clearTimeout(_rsT);
+  _rsT = setTimeout(()=>{ if (latestBookings.length){ render(latestBookings); } }, 120);
+});
+</script>
 </body>
 </html>
